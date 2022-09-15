@@ -92,16 +92,16 @@ class _MyHomePageState extends State<MyHomePage> {
                     builder: (_) => ButtonBar(
                           children: <Widget>[
                             ElevatedButton(
-                              child: const Text('Remove Completed'),
                               onPressed: list.canRemoveAllCompleted
                                   ? list.removeCompleted
                                   : null,
+                              child: const Text('Remove Completed'),
                             ),
                             ElevatedButton(
-                              child: const Text('Mark All Completed'),
                               onPressed: list.canMarkAllCompleted
                                   ? list.markAllAsCompleted
                                   : null,
+                              child: const Text('Mark All Completed'),
                             )
                           ],
                         ))
