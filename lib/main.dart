@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:provider/provider.dart';
+import 'package:todo_app_mobx/todo_list.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,13 +12,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Todos'),
+    return Provider(
+      create: ((context) => TodoList()),
+      builder: ((context, child) {
+        return MaterialApp(
+          title: 'Flutter Demo',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(
+            primarySwatch: Colors.blue,
+          ),
+          home: const MyHomePage(title: 'Todos'),
+        );
+      }),
     );
   }
 }
@@ -33,6 +41,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final list = Provider.of<TodoList>(context);
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -47,47 +56,93 @@ class _MyHomePageState extends State<MyHomePage> {
                   labelText: 'Add a Todo', contentPadding: EdgeInsets.all(10)),
               controller: _textController,
               textInputAction: TextInputAction.done,
-              onSubmitted: (String value) {},
+              onSubmitted: (String value) {
+                list.addTodo(value);
+                _textController.clear();
+              },
             ),
-            RadioListTile(
-                dense: true,
-                title: const Text('All'),
-                value: 1,
-                groupValue: 2,
-                onChanged: (filter) {}),
-            RadioListTile(
-                dense: true,
-                title: const Text('Processing'),
-                value: 2,
-                groupValue: 2,
-                onChanged: (filter) {}),
-            RadioListTile(
-                dense: true,
-                title: const Text('Completed'),
-                value: 3,
-                groupValue: 2,
-                onChanged: (filter) {}),
+            Observer(
+              builder: (_) => Column(
+                children: <Widget>[
+                  RadioListTile(
+                      dense: true,
+                      title: const Text('All'),
+                      value: VisibilityFilter.all,
+                      groupValue: list.filter,
+                      onChanged: (filter) => list.filter = filter!),
+                  RadioListTile(
+                      dense: true,
+                      title: const Text('Pending'),
+                      value: VisibilityFilter.pending,
+                      groupValue: list.filter,
+                      onChanged: (filter) => list.filter = filter!),
+                  RadioListTile(
+                      dense: true,
+                      title: const Text('Completed'),
+                      value: VisibilityFilter.completed,
+                      groupValue: list.filter,
+                      onChanged: (filter) => list.filter = filter!),
+                ],
+              ),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ButtonBar(
-                  children: <Widget>[
-                    ElevatedButton(
-                        onPressed: (() {}),
-                        child: const Text('Remove Completed')),
-                    ElevatedButton(
-                        onPressed: (() {}),
-                        child: const Text('Mark All Completed'))
-                  ],
-                ),
+                Observer(
+                    builder: (_) => ButtonBar(
+                          children: <Widget>[
+                            ElevatedButton(
+                              child: const Text('Remove Completed'),
+                              onPressed: list.canRemoveAllCompleted
+                                  ? list.removeCompleted
+                                  : null,
+                            ),
+                            ElevatedButton(
+                              child: const Text('Mark All Completed'),
+                              onPressed: list.canMarkAllCompleted
+                                  ? list.markAllAsCompleted
+                                  : null,
+                            )
+                          ],
+                        ))
               ],
             ),
-            const Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  "add a todo",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                )),
+            Observer(
+                builder: (_) => Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(
+                      list.itemsDescription,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ))),
+            Observer(
+                builder: (_) => Flexible(
+                      child: ListView.builder(
+                          itemCount: list.visibleTodos.length,
+                          itemBuilder: (_, index) {
+                            final todo = list.visibleTodos[index];
+                            return Observer(
+                                builder: (_) => CheckboxListTile(
+                                      controlAffinity:
+                                          ListTileControlAffinity.leading,
+                                      value: todo.done,
+                                      onChanged: (flag) => todo.done = flag!,
+                                      title: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                              child: Text(
+                                            todo.description,
+                                            overflow: TextOverflow.ellipsis,
+                                          )),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete),
+                                            onPressed: () =>
+                                                list.removeTodo(todo),
+                                          )
+                                        ],
+                                      ),
+                                    ));
+                          }),
+                    ))
           ],
         ),
       ),
